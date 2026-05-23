@@ -42,12 +42,16 @@
 | Phase 4 — ChromaDB ingestion + RAG | ✅ | 8 docs → 29 chunks; retrieval verified; `indexed=True` in DB |
 | Phase 5 — Ollama + LangChain chat | ✅ | `POST /api/chat`; RAG → LLM pipeline; 503 on missing model/Ollama down; 13 unit tests passing; live tested with `mistral:7b` |
 | Phase 5.5 — Early chat frontend | ✅ | Next.js 15 + React 19 + Tailwind; `/chat` page; suggested questions; source cards; loading/error states; CORS wired; build passes |
+| Phase 6 — Business tools over Postgres | ✅ | 7 tools in `backend/app/tools/`; Pydantic schemas; 25/25 tests passing; verify script passes; duplicate payment detection confirmed |
+| Phase 7 — LangGraph agent workflow | ✅ | StateGraph with 4 nodes; keyword intent classifier; 8 intents; 56/56 tests; verify 6/6; POST /api/chat routes through agent |
+| Phase 7.1 — Hallucination fix | ✅ | `build_answer_prompt()` + `strip_fake_ticket_ids()`; 13 new tests; 69/69 total |
+| Phase 8 — Persistence + core API endpoints | ✅ | Conversation/message/tool-call persistence; 8 new REST endpoints; 95/95 tests |
 
 ### Next up
 
-**Phase 6 — Business tools over Postgres**
+**Phase 9 — Customer chat frontend**
 
-Scope: `get_order_status`, `get_user_profile`, `get_subscription_status`, `check_payment_history`, `check_refund_eligibility`, `create_support_ticket`, `escalate_to_human` — all reading/writing Postgres, returning Pydantic results. No LLM deciding to call them yet (that's Phase 7).
+Scope: Upgrade the existing Next.js `/chat` page to use `conversation_id` for multi-turn conversations, show ticket status when returned, and display per-message feedback buttons that call `POST /api/feedback`.
 
 ---
 
@@ -134,7 +138,12 @@ supportflow/
 │           ├── __init__.py
 │           ├── ingest.py       ← chunk + embed + upsert to Chroma; marks indexed=True
 │           └── retriever.py    ← retrieve(query, k) → list[dict]; CLI verification
-└── frontend/                   ← placeholder (Next.js added Phase 5.5)
+│       └── tools/
+│           ├── __init__.py
+│           ├── schemas.py      ← Pydantic result types for all 7 tools
+│           ├── support_tools.py ← 7 business tool functions
+│           └── verify.py       ← CLI: python -m app.tools.verify
+└── frontend/                   ← Next.js (added Phase 5.5)
 ```
 
 ---
@@ -280,11 +289,11 @@ Answer:
 ✅ Phase 4  — ChromaDB + RAG retrieval
 ✅ Phase 5  — Ollama + LangChain minimal chat
 ✅ Phase 5.5 — Early frontend chat slice (Next.js)
-⬜ Phase 6  — Business tools over Postgres  ← NEXT
-⬜ Phase 6  — Business tools over Postgres
-⬜ Phase 7  — LangGraph agent workflow
-⬜ Phase 8  — Persistence + core API endpoints
-⬜ Phase 9  — Customer chat frontend
+✅ Phase 6  — Business tools over Postgres
+✅ Phase 7  — LangGraph agent workflow
+✅ Phase 7.1 — Hallucination fix
+✅ Phase 8  — Persistence + core API endpoints
+⬜ Phase 9  — Customer chat frontend  ← NEXT
 ⬜ Phase 10 — Admin dashboard + admin APIs
 ⬜ Phase 11 — MLflow tracking
 ⬜ Phase 12 — DeepEval evaluation suite
@@ -308,4 +317,37 @@ Answer:
 
 ---
 
-*Last updated: end of Phase 4 session, 2026-05-23*
+---
+
+## 12. Phase 6 Implementation Notes
+
+### Tools (all in `backend/app/tools/support_tools.py`)
+
+| Tool | Notes |
+|---|---|
+| `get_order_status(order_number, db=None)` | Returns `OrderStatusResult`; joins User for name/email |
+| `get_user_profile(email, db=None)` | Returns `UserProfileResult` |
+| `get_subscription_status(email, db=None)` | Returns `SubscriptionStatusResult`; first sub found for user |
+| `check_payment_history(email, db=None)` | Returns `PaymentHistoryResult`; detects duplicates within 7-day window, same amount, both success |
+| `check_refund_eligibility(order_number, db=None)` | Returns `RefundEligibilityResult`; deterministic rules by order status |
+| `create_support_ticket(category, priority, summary, ...)` | Inserts ticket; status=escalated if escalation_reason provided |
+| `escalate_to_human(reason, summary, ...)` | Always status=escalated; default priority=high |
+
+### Session pattern
+All tools accept optional `db: Session`. If omitted, they create and close their own `SessionLocal()` session via `_session()` context manager. This makes them callable from scripts, tests, and the LangGraph agent without dependency injection setup.
+
+### Refund rules
+`delivered` → eligible=True; `shipped` → eligible=None + requires_review=True; `processing`/`pending`/`cancelled` → eligible=False
+
+### Duplicate detection
+`_detect_duplicates()` in `support_tools.py`: two successful payments of the same amount (≥ $1.00) within 7 days → `duplicate_detected=True`.
+
+### pytest.ini added
+`backend/pytest.ini` with `pythonpath = .` — fixes `ModuleNotFoundError: No module named 'app'` for all tests. This was missing and previously required workarounds.
+
+### Tests
+`backend/tests/test_support_tools.py` — 25 integration tests (all pass). Tests share a single `module`-scoped DB session. Assume seed data is present.
+
+---
+
+*Last updated: end of Phase 6 session, 2026-05-24*

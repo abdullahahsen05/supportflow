@@ -1,87 +1,155 @@
 from __future__ import annotations
 
+import asyncio
 import logging
-from typing import Annotated
+from typing import Annotated, Any, Optional
 
-from fastapi import APIRouter, HTTPException
-from langchain_core.messages import HumanMessage, SystemMessage
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
+from app.agent.graph import run_agent
 from app.core.config import settings
-from app.llm.ollama import check_ollama_available, get_chat_llm
-from app.llm.prompts import SYSTEM_PROMPT, USER_TEMPLATE, build_context
-from app.rag.retriever import retrieve
+from app.db.session import get_db
+from app.llm.ollama import check_ollama_available
+from app.services.conversation_service import (
+    get_or_create_conversation,
+    link_ticket_to_conversation,
+    save_message,
+    save_tool_call,
+    update_conversation_meta,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+# ---------------------------------------------------------------------------
+# Request / response schemas
+# ---------------------------------------------------------------------------
+
 class ChatRequest(BaseModel):
     message: Annotated[str, Field(min_length=1, description="Customer question")]
-    k: int = Field(default=4, ge=1, le=10, description="KB chunks to retrieve (1–10)")
+    k: int = Field(default=4, ge=1, le=10, description="KB chunks to retrieve")
+    conversation_id: Optional[int] = Field(
+        default=None, description="Existing conversation to append to"
+    )
+    user_email: Optional[str] = Field(
+        default=None, description="Customer email to link conversation to a user"
+    )
 
 
 class SourceInfo(BaseModel):
     title: str
     file_path: str
     chunk_index: int
-    distance: float | None
+    distance: Optional[float] = None
 
 
 class ChatResponse(BaseModel):
+    conversation_id: int
     answer: str
     sources: list[SourceInfo]
     model: str
+    intent: Optional[str] = None
+    tool_name: Optional[str] = None
+    tool_result: Optional[dict[str, Any]] = None
+    ticket: Optional[dict[str, Any]] = None
 
+
+# ---------------------------------------------------------------------------
+# Endpoint
+# ---------------------------------------------------------------------------
 
 @router.post("/api/chat", response_model=ChatResponse, tags=["Chat"])
-async def chat(request: ChatRequest) -> ChatResponse:
+async def chat(
+    request: ChatRequest,
+    db: Session = Depends(get_db),
+) -> ChatResponse:
+    # Gate on Ollama availability before touching the DB
     ok, reason = check_ollama_available()
     if not ok:
         raise HTTPException(status_code=503, detail=reason)
 
+    # 1. Get or create conversation
+    conv = get_or_create_conversation(db, request.conversation_id, request.user_email)
+    conv_id = conv.id
+
+    # 2. Save customer message
+    save_message(db, conv_id, "customer", request.message)
+
+    # 3. Run the LangGraph agent in a thread pool (all nodes are sync)
+    loop = asyncio.get_event_loop()
     try:
-        chunks = retrieve(request.message, k=request.k)
+        state = await loop.run_in_executor(None, run_agent, request.message)
     except Exception as exc:
-        logger.error("RAG retrieval failed: %s", exc)
-        raise HTTPException(status_code=500, detail=f"Retrieval error: {exc}")
+        db.rollback()
+        logger.error("Agent execution failed: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Agent error: {exc}")
 
-    context = build_context(chunks)
-    if not context:
-        context = "No relevant information found in the knowledge base."
+    answer = state.get("answer") or "I was unable to generate a response. Please try again."
+    ticket = state.get("ticket")
 
-    user_content = USER_TEMPLATE.format(context=context, question=request.message)
-    llm = get_chat_llm()
-    messages = [SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content=user_content)]
+    # 4. Save AI response message
+    save_message(db, conv_id, "ai", answer)
 
-    try:
-        ai_message = await llm.ainvoke(messages)
-        answer = ai_message.content if hasattr(ai_message, "content") else str(ai_message)
-    except Exception as exc:
-        logger.error("LLM invocation failed: %s", exc)
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                f"Ollama is not available at {settings.OLLAMA_BASE_URL}. "
-                f"Start Ollama and ensure {settings.OLLAMA_CHAT_MODEL} is pulled."
-            ),
+    # 5. Persist tool call if the agent invoked a tool
+    if state.get("tool_name"):
+        save_tool_call(
+            db,
+            conv_id,
+            state["tool_name"],
+            state.get("tool_input"),
+            state.get("tool_result"),
         )
 
+    # 6. Link ticket to conversation if one was created/escalated
+    if ticket and ticket.get("ticket_id"):
+        link_ticket_to_conversation(db, ticket["ticket_id"], conv_id)
+
+    # 7. Update conversation status / intent / sentiment
+    conv_status = (
+        "escalated"
+        if (ticket and ticket.get("status") == "escalated")
+        else "open"
+    )
+    update_conversation_meta(
+        db,
+        conv_id,
+        status=conv_status,
+        intent=state.get("intent"),
+        sentiment=state.get("sentiment"),
+    )
+
+    db.commit()
+
+    # Build response
     sources = [
         SourceInfo(
-            title=c.get("title") or c.get("source", ""),
-            file_path=c.get("file_path", ""),
-            chunk_index=int(c.get("chunk_index", 0)),
-            distance=c.get("distance"),
+            title=s.get("title", ""),
+            file_path=s.get("file_path", ""),
+            chunk_index=int(s.get("chunk_index", 0)),
+            distance=s.get("distance"),
         )
-        for c in chunks
+        for s in (state.get("sources") or [])
     ]
 
     logger.info(
-        "chat completed | model=%s | chunks=%d | answer_len=%d",
-        settings.OLLAMA_CHAT_MODEL,
-        len(chunks),
+        "chat completed | conv=%d | intent=%s | tool=%s | ticket=%s | answer_len=%d",
+        conv_id,
+        state.get("intent"),
+        state.get("tool_name"),
+        ticket.get("ticket_id") if ticket else None,
         len(answer),
     )
 
-    return ChatResponse(answer=answer, sources=sources, model=settings.OLLAMA_CHAT_MODEL)
+    return ChatResponse(
+        conversation_id=conv_id,
+        answer=answer,
+        sources=sources,
+        model=settings.OLLAMA_CHAT_MODEL,
+        intent=state.get("intent"),
+        tool_name=state.get("tool_name"),
+        tool_result=state.get("tool_result"),
+        ticket=ticket,
+    )

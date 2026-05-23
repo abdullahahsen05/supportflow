@@ -11,10 +11,10 @@ SupportFlow AI is a portfolio-grade GenAI / LLMOps project. It is **not a chatbo
 🚧 **Under construction** — built in phases. See the execution plan for the roadmap.
 
 - [x] Phase 0 — Repo scaffolding & docs skeleton
-- [ ] Phase 1 — Backend foundation (FastAPI)
-- [ ] Phase 2 — PostgreSQL + models + migrations
-- [ ] Phase 3 — Seed data + knowledge base docs
-- [ ] Phase 4 — ChromaDB ingestion + RAG retrieval
+- [x] Phase 1 — Backend foundation (FastAPI)
+- [x] Phase 2 — PostgreSQL + models + migrations
+- [x] Phase 3 — Seed data + knowledge base docs
+- [x] Phase 4 — ChromaDB ingestion + RAG retrieval
 - [ ] Phase 5 — Ollama + LangChain minimal chat
 - [ ] Phase 5.5 — Early frontend chat slice
 - [ ] Phase 6 — Business tools over Postgres
@@ -55,6 +55,7 @@ SupportFlow AI is a portfolio-grade GenAI / LLMOps project. It is **not a chatbo
 ```
 supportflow/
 ├─ docker-compose.yml      # root — `docker compose up --build`
+├─ claude-docs/            # execution plan, ADRs, session context
 ├─ docs/                   # architecture, screenshots, demo script
 ├─ data/
 │  ├─ knowledge_base/      # seeded company policy docs (*.md)

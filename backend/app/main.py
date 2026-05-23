@@ -35,6 +35,18 @@ def create_app() -> FastAPI:
     from app.api.chat import router as chat_router
     app.include_router(chat_router)
 
+    from app.api.conversations import router as conversations_router
+    app.include_router(conversations_router)
+
+    from app.api.tickets import router as tickets_router
+    app.include_router(tickets_router)
+
+    from app.api.feedback import router as feedback_router
+    app.include_router(feedback_router)
+
+    from app.api.knowledge_base import router as knowledge_base_router
+    app.include_router(knowledge_base_router)
+
     @app.on_event("startup")
     async def on_startup() -> None:
         logger.info(
