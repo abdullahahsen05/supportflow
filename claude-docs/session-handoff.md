@@ -41,12 +41,13 @@
 | Phase 3 — Seed data + KB docs | ✅ | 5 users, 5 orders, 3 subs, 4 payments, 8 KB docs on disk + in DB |
 | Phase 4 — ChromaDB ingestion + RAG | ✅ | 8 docs → 29 chunks; retrieval verified; `indexed=True` in DB |
 | Phase 5 — Ollama + LangChain chat | ✅ | `POST /api/chat`; RAG → LLM pipeline; 503 on missing model/Ollama down; 13 unit tests passing; live tested with `mistral:7b` |
+| Phase 5.5 — Early chat frontend | ✅ | Next.js 15 + React 19 + Tailwind; `/chat` page; suggested questions; source cards; loading/error states; CORS wired; build passes |
 
 ### Next up
 
-**Phase 5.5 — Early frontend chat slice (Next.js)**
+**Phase 6 — Business tools over Postgres**
 
-Scope: minimal Next.js + TS + Tailwind app; single `/chat` page with message list, input box, loading state, AI answer + sources rendered. Thin API client to `POST /api/chat`. No feedback/escalation/ticket UI yet.
+Scope: `get_order_status`, `get_user_profile`, `get_subscription_status`, `check_payment_history`, `check_refund_eligibility`, `create_support_ticket`, `escalate_to_human` — all reading/writing Postgres, returning Pydantic results. No LLM deciding to call them yet (that's Phase 7).
 
 ---
 
@@ -278,7 +279,8 @@ Answer:
 ✅ Phase 3  — Seed data + KB docs
 ✅ Phase 4  — ChromaDB + RAG retrieval
 ✅ Phase 5  — Ollama + LangChain minimal chat
-⬜ Phase 5.5 — Early frontend chat slice (Next.js)  ← NEXT
+✅ Phase 5.5 — Early frontend chat slice (Next.js)
+⬜ Phase 6  — Business tools over Postgres  ← NEXT
 ⬜ Phase 6  — Business tools over Postgres
 ⬜ Phase 7  — LangGraph agent workflow
 ⬜ Phase 8  — Persistence + core API endpoints
