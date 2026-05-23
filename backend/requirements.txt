@@ -17,3 +17,6 @@ langchain-ollama==0.3.3
 # LLM (Phase 5)
 langchain-core==0.3.62
 httpx==0.28.1
+
+# Testing
+pytest==9.0.3
