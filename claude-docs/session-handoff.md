@@ -40,24 +40,13 @@
 | Phase 2 — PostgreSQL + models + Alembic | ✅ | All 11 tables, single migration, SQLAlchemy 2.0 style |
 | Phase 3 — Seed data + KB docs | ✅ | 5 users, 5 orders, 3 subs, 4 payments, 8 KB docs on disk + in DB |
 | Phase 4 — ChromaDB ingestion + RAG | ✅ | 8 docs → 29 chunks; retrieval verified; `indexed=True` in DB |
-| Phase 5 — Ollama + LangChain chat | ✅ | `POST /api/chat`; RAG → LLM pipeline; 503 on missing model/Ollama down; 13 unit tests passing. Awaiting user live test with `mistral:7b` |
+| Phase 5 — Ollama + LangChain chat | ✅ | `POST /api/chat`; RAG → LLM pipeline; 503 on missing model/Ollama down; 13 unit tests passing; live tested with `mistral:7b` |
 
 ### Next up
 
-**Phase 5 — User must pull mistral:7b and run live manual test**
+**Phase 5.5 — Early frontend chat slice (Next.js)**
 
-```powershell
-ollama pull mistral:7b   # ~4 GB download
-```
-
-Then from `backend/` with venv active:
-```powershell
-python -m app.llm.verify "How do I cancel my subscription?"
-python -m app.llm.verify "What is your refund period?"
-python -m app.llm.verify "What is CloudDesk's policy on alien spaceship rentals?"
-```
-
-If all three pass → Phase 5 is fully verified → proceed to **Phase 5.5 (Next.js early frontend chat slice)**.
+Scope: minimal Next.js + TS + Tailwind app; single `/chat` page with message list, input box, loading state, AI answer + sources rendered. Thin API client to `POST /api/chat`. No feedback/escalation/ticket UI yet.
 
 ---
 
@@ -288,8 +277,8 @@ Answer:
 ✅ Phase 2  — PostgreSQL + models + Alembic
 ✅ Phase 3  — Seed data + KB docs
 ✅ Phase 4  — ChromaDB + RAG retrieval
-✅ Phase 5  — Ollama + LangChain minimal chat  (awaiting mistral:7b live test)
-⬜ Phase 5.5 — Early frontend chat slice (Next.js)  ← NEXT after live test
+✅ Phase 5  — Ollama + LangChain minimal chat
+⬜ Phase 5.5 — Early frontend chat slice (Next.js)  ← NEXT
 ⬜ Phase 6  — Business tools over Postgres
 ⬜ Phase 7  — LangGraph agent workflow
 ⬜ Phase 8  — Persistence + core API endpoints
