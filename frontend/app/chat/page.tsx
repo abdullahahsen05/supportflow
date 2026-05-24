@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { chatApi } from "@/lib/api";
+import { sendChatMessage } from "@/lib/api";
 import type { SourceInfo } from "@/lib/types";
 
 const SUGGESTED = [
@@ -58,7 +58,7 @@ export default function ChatPage() {
     setLoading(true);
 
     try {
-      const data = await chatApi(trimmed);
+      const data = await sendChatMessage(trimmed);
       setMessages((prev) => [
         ...prev,
         {
