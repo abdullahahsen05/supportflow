@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     CHROMA_COLLECTION: str = "supportflow_knowledge_base"
 
     # MLflow (Phase 11)
+    # Default resolves to <repo-root>/mlruns when uvicorn is run from backend/
+    # Override in .env if you start the server from a different working directory.
     MLFLOW_TRACKING_URI: str = "file:../mlruns"
     MLFLOW_EXPERIMENT_NAME: str = "supportflow-ai-chat"
 
