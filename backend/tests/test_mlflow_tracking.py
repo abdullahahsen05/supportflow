@@ -107,6 +107,41 @@ class TestLogChatRunHappyPath:
         assert isinstance(PROMPT_VERSION, str)
         assert len(PROMPT_VERSION) > 0
 
+    def test_does_not_raise_and_logs_error_artifact(self, tmp_path):
+        """log_chat_run writes error.txt artifact when error is non-None."""
+        import mlflow
+        tracking_uri = f"file:{tmp_path / 'mlruns'}"
+        with patch("app.observability.mlflow_tracking.settings") as mock_settings:
+            mock_settings.MLFLOW_TRACKING_URI = tracking_uri
+            mock_settings.MLFLOW_EXPERIMENT_NAME = "test-experiment"
+            log_chat_run(
+                model="mistral:7b",
+                user_message="Test",
+                answer="",
+                intent=None,
+                sentiment=None,
+                confidence=None,
+                tool_name=None,
+                tool_result=None,
+                sources=[],
+                latency_seconds=0.1,
+                conversation_id=1,
+                ticket_id=None,
+                escalated=False,
+                error="Tool timed out after 180s",
+            )
+
+        # Verify error.txt artifact was written
+        mlflow.set_tracking_uri(tracking_uri)
+        client = mlflow.tracking.MlflowClient(tracking_uri=tracking_uri)
+        experiment = client.get_experiment_by_name("test-experiment")
+        assert experiment is not None
+        runs = client.search_runs(experiment_ids=[experiment.experiment_id])
+        assert len(runs) >= 1
+        artifacts = client.list_artifacts(runs[0].info.run_id)
+        artifact_names = {a.path for a in artifacts}
+        assert "error.txt" in artifact_names
+
 
 # ---------------------------------------------------------------------------
 # Test 2: MLflow failure is swallowed — chat must not break
@@ -116,10 +151,11 @@ class TestLogChatRunNonBreaking:
 
     def test_silent_when_start_run_raises(self):
         """log_chat_run swallows exceptions from mlflow.start_run."""
+        import mlflow as _mlflow
         with patch("app.observability.mlflow_tracking.settings") as mock_settings:
             mock_settings.MLFLOW_TRACKING_URI = "file:/nonexistent"
             mock_settings.MLFLOW_EXPERIMENT_NAME = "test"
-            with patch("mlflow.start_run", side_effect=Exception("MLflow is down")):
+            with patch.object(_mlflow, "start_run", side_effect=Exception("MLflow is down")):
                 log_chat_run(**_PAYLOAD)
 
     def test_silent_when_set_tracking_uri_raises(self):

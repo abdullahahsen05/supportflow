@@ -81,13 +81,13 @@ def log_chat_run(
             mlflow.log_text(answer, "answer.txt")
 
             if sources:
-                mlflow.log_text(json.dumps(sources, indent=2), "sources.json")
+                mlflow.log_text(json.dumps(sources, indent=2, default=str), "sources.json")
 
             if tool_result is not None:
-                mlflow.log_text(json.dumps(tool_result, indent=2), "tool_result.json")
+                mlflow.log_text(json.dumps(tool_result, indent=2, default=str), "tool_result.json")
 
             if error:
                 mlflow.log_text(error, "error.txt")
 
     except Exception as exc:
-        logger.warning("MLflow logging failed (non-fatal): %s", exc)
+        logger.warning("MLflow logging failed (non-fatal): %s: %s", type(exc).__name__, exc)
