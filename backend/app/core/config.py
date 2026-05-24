@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     # ChromaDB (Phase 4+)
     CHROMA_COLLECTION: str = "supportflow_knowledge_base"
 
+    # MLflow (Phase 11)
+    MLFLOW_TRACKING_URI: str = "file:../mlruns"
+    MLFLOW_EXPERIMENT_NAME: str = "supportflow-ai-chat"
+
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
     def parse_cors_origins(cls, v: Any) -> list[str]:
