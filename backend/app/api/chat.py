@@ -146,6 +146,7 @@ async def chat(
     db.commit()
 
     # 8. Log to MLflow (non-blocking — failure here must not break chat)
+    latency_seconds = time.perf_counter() - t0
     log_chat_run(
         model=settings.OLLAMA_CHAT_MODEL,
         user_message=request.message,
@@ -156,7 +157,7 @@ async def chat(
         tool_name=state.get("tool_name"),
         tool_result=state.get("tool_result"),
         sources=state.get("sources") or [],
-        latency_seconds=time.perf_counter() - t0,
+        latency_seconds=latency_seconds,
         conversation_id=conv_id,
         ticket_id=ticket.get("ticket_id") if ticket else None,
         escalated=conv_status == "escalated",
@@ -181,7 +182,7 @@ async def chat(
         state.get("tool_name"),
         ticket.get("ticket_id") if ticket else None,
         len(answer),
-        time.perf_counter() - t0,
+        latency_seconds,
     )
 
     return ChatResponse(
