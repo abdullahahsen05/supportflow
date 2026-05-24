@@ -178,3 +178,65 @@ class TestLogChatRunNonBreaking:
 
         with patch("builtins.__import__", side_effect=mock_import):
             log_chat_run(**_PAYLOAD)
+
+
+# ---------------------------------------------------------------------------
+# Test 3: POST /api/chat still works with MLflow wired in
+# ---------------------------------------------------------------------------
+
+class TestChatEndpointWithMlflow:
+
+    _OLLAMA_CHECK = "app.api.chat.check_ollama_available"
+    _RUN_AGENT    = "app.api.chat.run_agent"
+
+    def _state_faq(self) -> dict:
+        return {
+            "message": "What is your refund period?",
+            "intent": "faq",
+            "sentiment": "neutral",
+            "confidence": 0.85,
+            "needs_human": False,
+            "retrieved_context": [],
+            "sources": [
+                {"title": "Refund Policy", "file_path": "refund_policy.md",
+                 "chunk_index": 0, "distance": 0.1}
+            ],
+            "tool_name": None,
+            "tool_input": None,
+            "tool_result": None,
+            "ticket": None,
+            "answer": "Our refund period is 30 days.",
+            "error": None,
+        }
+
+    def test_chat_returns_200_when_mlflow_succeeds(self, tmp_path):
+        """POST /api/chat returns 200 and MLflow run is written to tmp store."""
+        from fastapi.testclient import TestClient
+        from app.main import app
+        from unittest.mock import patch
+
+        with patch(self._OLLAMA_CHECK, return_value=(True, "")), \
+             patch(self._RUN_AGENT, return_value=self._state_faq()), \
+             patch("app.observability.mlflow_tracking.settings") as mock_settings:
+            mock_settings.MLFLOW_TRACKING_URI = f"file:{tmp_path / 'mlruns'}"
+            mock_settings.MLFLOW_EXPERIMENT_NAME = "test-chat"
+            client = TestClient(app)
+            resp = client.post("/api/chat", json={"message": "What is your refund period?"})
+
+        assert resp.status_code == 200
+        assert resp.json()["conversation_id"] > 0
+
+    def test_chat_returns_200_when_mlflow_fails(self):
+        """POST /api/chat returns 200 even when MLflow raises."""
+        import mlflow as _mlflow
+        from fastapi.testclient import TestClient
+        from app.main import app
+        from unittest.mock import patch
+
+        with patch(self._OLLAMA_CHECK, return_value=(True, "")), \
+             patch(self._RUN_AGENT, return_value=self._state_faq()), \
+             patch.object(_mlflow, "set_tracking_uri", side_effect=Exception("MLflow down")):
+            client = TestClient(app)
+            resp = client.post("/api/chat", json={"message": "What is your refund period?"})
+
+        assert resp.status_code == 200
