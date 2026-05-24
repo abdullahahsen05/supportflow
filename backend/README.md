@@ -149,3 +149,56 @@ python -m app.rag.retriever "duplicate charge"
 - ChromaDB persisted to `../data/chroma/` (gitignored; regenerate with ingest).
 - Collection name: `supportflow_knowledge_base` (29 chunks across 8 docs).
 - If Ollama is not running, the script prints a clear error and exits.
+
+---
+
+## MLflow Tracking (Phase 11)
+
+Every `POST /api/chat` call is logged as an MLflow run in the local file store at `<repo-root>/mlruns`.
+
+### Start the MLflow UI
+
+Run from the **repo root** (`C:\Users\Victus\Desktop\supportflow\`):
+
+```powershell
+cd C:\Users\Victus\Desktop\supportflow
+backend\.venv\Scripts\Activate.ps1
+mlflow ui --backend-store-uri mlruns --port 5000
+```
+
+Then open: **http://localhost:5000**
+
+> The `mlruns/` directory is created automatically the first time a chat request is made.
+> If it does not exist yet, start the backend, send one chat message, then start the MLflow UI.
+
+### What is logged per run
+
+| Type | Key | Value |
+|---|---|---|
+| Param | `model` | Ollama model name, e.g. `mistral:7b` |
+| Param | `prompt_version` | `v1-agent-rag-tools` |
+| Param | `intent` | Classified intent, e.g. `order_status`, `faq`, `billing_issue` |
+| Param | `sentiment` | `neutral` or `negative` |
+| Param | `tool_name` | Tool invoked, or `none` |
+| Metric | `latency_seconds` | End-to-end request duration |
+| Metric | `answer_length` | Character count of the AI answer |
+| Metric | `retrieved_source_count` | Number of KB chunks retrieved |
+| Metric | `confidence` | Agent confidence score (when present) |
+| Tag | `conversation_id` | Postgres conversation ID |
+| Tag | `ticket_created` | `true` / `false` |
+| Tag | `escalated` | `true` / `false` |
+| Artifact | `user_message.txt` | The customer's original message |
+| Artifact | `answer.txt` | The AI's response |
+| Artifact | `sources.json` | Retrieved KB source documents (when sources exist) |
+| Artifact | `tool_result.json` | Tool call result (when a tool was used) |
+| Artifact | `error.txt` | Error details (only on failed agent runs) |
+
+### Quick verification
+
+1. Start backend: `uvicorn app.main:app --reload` (from `backend/`)
+2. Send a message at `http://localhost:3000/chat` — e.g. "Where is my order #1004?"
+3. Start MLflow UI (from repo root): `mlflow ui --backend-store-uri mlruns --port 5000`
+4. Open `http://localhost:5000` → click **supportflow-ai-chat** → click the latest run
+5. Verify params include `intent: order_status`, `tool_name: get_order_status`
+6. Verify metrics include `latency_seconds` and `answer_length`
+7. Check the **Artifacts** tab for `user_message.txt` and `answer.txt`
