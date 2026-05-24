@@ -83,14 +83,8 @@ def log_chat_run(
             if sources:
                 mlflow.log_text(json.dumps(sources, indent=2), "sources.json")
 
-            if tool_result:
-                # Exclude potentially large list fields to avoid huge artifacts
-                summary = {
-                    k: v
-                    for k, v in tool_result.items()
-                    if not isinstance(v, list) or len(v) <= 5
-                }
-                mlflow.log_text(json.dumps(summary, indent=2), "tool_result.json")
+            if tool_result is not None:
+                mlflow.log_text(json.dumps(tool_result, indent=2), "tool_result.json")
 
             if error:
                 mlflow.log_text(error, "error.txt")
