@@ -22,6 +22,7 @@ function statusBadge(status: string): string {
     case "open":      return "bg-emerald-100 text-emerald-700";
     case "pending":   return "bg-amber-100 text-amber-700";
     case "resolved":  return "bg-slate-100 text-slate-500";
+    case "closed":    return "bg-slate-100 text-slate-400";
     default:          return "bg-slate-100 text-slate-500";
   }
 }
