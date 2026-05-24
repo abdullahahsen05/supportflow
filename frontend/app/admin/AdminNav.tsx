@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -7,7 +8,7 @@ interface NavItem {
   href: string;
   label: string;
   exactMatch: boolean;
-  icon: React.ReactNode;
+  icon: ReactNode;
 }
 
 const NAV_ITEMS: NavItem[] = [

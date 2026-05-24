@@ -157,8 +157,9 @@ export default function TicketDetailPage() {
           <h2 className="mb-4 text-sm font-semibold text-slate-700">Update Ticket</h2>
           <div className="space-y-4">
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500">Status</label>
+              <label htmlFor="ticket-status" className="mb-1 block text-xs font-medium text-slate-500">Status</label>
               <select
+                id="ticket-status"
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
                 className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
@@ -167,8 +168,9 @@ export default function TicketDetailPage() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500">Priority</label>
+              <label htmlFor="ticket-priority" className="mb-1 block text-xs font-medium text-slate-500">Priority</label>
               <select
+                id="ticket-priority"
                 value={priority}
                 onChange={(e) => setPriority(e.target.value)}
                 className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
@@ -177,8 +179,9 @@ export default function TicketDetailPage() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500">Summary</label>
+              <label htmlFor="ticket-summary" className="mb-1 block text-xs font-medium text-slate-500">Summary</label>
               <textarea
+                id="ticket-summary"
                 value={summary}
                 onChange={(e) => setSummary(e.target.value)}
                 rows={4}

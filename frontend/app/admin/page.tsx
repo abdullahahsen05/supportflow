@@ -158,7 +158,7 @@ export default function AdminDashboard() {
                   <th className="px-4 py-3">Intent</th>
                   <th className="px-4 py-3">Preview</th>
                   <th className="px-4 py-3">Updated</th>
-                  <th className="px-4 py-3"></th>
+                  <th className="px-4 py-3 sr-only">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -210,7 +210,7 @@ export default function AdminDashboard() {
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Summary</th>
                   <th className="px-4 py-3">Created</th>
-                  <th className="px-4 py-3"></th>
+                  <th className="px-4 py-3 sr-only">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
