@@ -40,7 +40,7 @@ export interface FeedbackResponse {
   id: number;
   conversation_id: number;
   message_id: number | null;
-  feedback_type: string;
+  feedback_type: FeedbackType;
   comment: string | null;
   created_at: string;
 }
