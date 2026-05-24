@@ -125,9 +125,9 @@ export default function ChatPage() {
 
   async function handleFeedback(msgId: string, type: FeedbackType) {
     if (feedbackGiven.has(msgId) || conversationId === null) return;
-    setFeedbackGiven((prev) => new Set(prev).add(msgId));
     try {
       await sendFeedback({ conversation_id: conversationId, feedback_type: type });
+      setFeedbackGiven((prev) => new Set(prev).add(msgId));
       setFeedbackMsg((prev) => ({ ...prev, [msgId]: "Feedback saved" }));
     } catch {
       setFeedbackMsg((prev) => ({ ...prev, [msgId]: "Feedback failed" }));
@@ -173,6 +173,7 @@ export default function ChatPage() {
             )}
             {messages.length > 0 && (
               <button
+                type="button"
                 onClick={startNewChat}
                 className="text-xs text-slate-400 transition-colors hover:text-slate-600"
               >
@@ -186,11 +187,13 @@ export default function ChatPage() {
       {/* ── Session bar ────────────────────────────────────────────────────── */}
       <div className="border-b border-slate-200 bg-white px-6 py-2">
         <div className="mx-auto flex max-w-4xl items-center gap-3">
-          <span className="text-xs text-slate-500">Demo user:</span>
+          <label htmlFor="demo-user" className="text-xs text-slate-500">Demo user:</label>
           <select
+            id="demo-user"
             value={userEmail}
             onChange={(e) => setUserEmail(e.target.value)}
-            className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            disabled={conversationId !== null}
+            className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {DEMO_EMAILS.map((email) => (
               <option key={email} value={email}>{email}</option>
@@ -259,6 +262,7 @@ export default function ChatPage() {
                   ) : (
                     FEEDBACK_OPTIONS.map(({ type, label }) => (
                       <button
+                        type="button"
                         key={type}
                         onClick={() => handleFeedback(msg.id, type)}
                         disabled={feedbackGiven.has(msg.id)}
@@ -314,6 +318,7 @@ export default function ChatPage() {
             className="flex gap-2"
           >
             <input
+              aria-label="Your message"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={loading}
