@@ -46,10 +46,11 @@
 | Phase 7 — LangGraph agent workflow | ✅ | StateGraph with 4 nodes; keyword intent classifier; 8 intents; 56/56 tests; verify 6/6; POST /api/chat routes through agent |
 | Phase 7.1 — Hallucination fix | ✅ | `build_answer_prompt()` + `strip_fake_ticket_ids()`; 13 new tests; 69/69 total |
 | Phase 8 — Persistence + core API endpoints | ✅ | Conversation/message/tool-call persistence; 8 new REST endpoints; 95/95 tests |
+| Phase 9 — Admin dashboard frontend | ✅ | `/admin` dashboard + `/admin/tickets/[id]` + `/admin/knowledge-base` + `/admin/conversations/[id]`; build passes; 95/95 backend tests |
 
 ### Next up
 
-**Phase 9 — Customer chat frontend**
+**Phase 10 — Customer chat frontend upgrade**
 
 Scope: Upgrade the existing Next.js `/chat` page to use `conversation_id` for multi-turn conversations, show ticket status when returned, and display per-message feedback buttons that call `POST /api/feedback`.
 
@@ -293,7 +294,8 @@ Answer:
 ✅ Phase 7  — LangGraph agent workflow
 ✅ Phase 7.1 — Hallucination fix
 ✅ Phase 8  — Persistence + core API endpoints
-⬜ Phase 9  — Customer chat frontend  ← NEXT
+✅ Phase 9  — Admin dashboard frontend
+⬜ Phase 10 — Customer chat frontend upgrade  ← NEXT
 ⬜ Phase 10 — Admin dashboard + admin APIs
 ⬜ Phase 11 — MLflow tracking
 ⬜ Phase 12 — DeepEval evaluation suite
